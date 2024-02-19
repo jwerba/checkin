@@ -1,0 +1,39 @@
+apply plugin: 'com.android.application'
+
+android {
+    defaultConfig {
+        compileSdkVersion 33
+        applicationId "com.jwerba.checkin"
+        minSdkVersion 26
+        targetSdkVersion 33
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    productFlavors {
+    }
+    namespace 'com.jwerba.checkin'
+}
+
+dependencies {
+    implementation 'com.applandeo:material-calendar-view:1.7.0'
+    implementation "androidx.work:work-runtime:2.8.0"
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    testImplementation 'junit:junit:4.12'
+    implementation 'androidx.appcompat:appcompat:1.0.0'
+    implementation 'com.google.android.material:material:1.0.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.recyclerview:recyclerview:1.0.0'
+    implementation 'com.google.code.gson:gson:2.8.1'
+}
