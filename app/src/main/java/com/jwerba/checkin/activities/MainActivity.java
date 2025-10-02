@@ -8,12 +8,14 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.storage.StorageManager;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
@@ -21,6 +23,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,23 +31,39 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.work.BackoffPolicy;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
+import com.applandeo.materialcalendarview.CalendarDay;
 import com.applandeo.materialcalendarview.CalendarView;
 import com.applandeo.materialcalendarview.EventDay;
 import com.applandeo.materialcalendarview.exceptions.OutOfDateRangeException;
+import com.applandeo.materialcalendarview.listeners.OnCalendarDayClickListener;
 import com.google.android.material.navigation.NavigationView;
+import com.jwerba.checkin.DetectionRunner;
+import com.jwerba.checkin.geolocation.GeofenceBroadcastReceiver;
+import com.jwerba.checkin.helpers.CustomNotificationBuilder;
 import com.jwerba.checkin.storage.DataManager;
 import com.jwerba.checkin.model.Day;
 import com.jwerba.checkin.model.DayType;
 import com.jwerba.checkin.R;
-import com.jwerba.checkin.services.Action;
+import com.jwerba.checkin.strategies.DetectionListener;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -62,6 +81,7 @@ public class MainActivity extends AppCompatActivity
     private boolean isReceiverRegistered = false;
     private String lastDetectedSSID = null;
 
+    private final DetectionRunner runner = new DetectionRunner(this);
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -76,7 +96,8 @@ public class MainActivity extends AppCompatActivity
                 LocalDate d = LocalDate.of(c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
                 Day day = new Day(d, r);
                 DataManager.getInstance(this.getApplicationContext()).add(day);
-                initializeDisplayContent();
+                List<Day> days = DataManager.getInstance(this).getAll();
+                initializeDisplayContent(days);
             }
             if (resultCode == Activity.RESULT_CANCELED) {
                 // Write your code if there's no result
@@ -92,28 +113,30 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.i(TAG, "MainActivity.onCreate.start");
         super.onCreate(savedInstanceState);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
 
+
+        final Context ctx = this;
+        runner.addListener(new DetectionListener() {
+            @Override
+            public void OnDetected(Class detectionStrategy, Map<String, String> context) {
+                CustomNotificationBuilder notificationBuilder = new CustomNotificationBuilder(ctx);
+                notificationBuilder.notify(this.getClass(), "bigText", "bigContentTitle", "summaryText","contentTitle", "contentText");
+                notificationBuilder.noty();
+            }
+        });
+        runner.start();
+
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
-        try {
-            //instantiateBroadcastReceiver();
-        } catch (Exception ex) {
-            Log.e(TAG, "Error on OnCreate-> instantiateBroadcastReceiver", ex);
-            throw  ex;
-        }
-        try {
-            //startForegroundService(new Intent(this, MainService.class));
-        } catch (Exception ex) {
-            Log.e(TAG, "Error on OnCreate-> startForegroundService", ex);
-            throw  ex;
-        }
+        //instantiateBroadcastReceiver();
+        //startForegroundService(new Intent(this, MainService.class));
 
         /*
         FloatingActionButton fab = findViewById(R.id.fab);
@@ -138,16 +161,25 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         initializeIfIsNot();
-        initializeDisplayContent();
+        List<Day> days = DataManager.getInstance(this).getAll();
+        initializeDisplayContent(days);
+        Log.i(TAG, "MainActivity.onCreate.end");
     }
+
+
 
 
     private void initializeIfIsNot() {
         if (!this.initialized) {
-
             this.calendarView = (CalendarView) findViewById(R.id.calendar);
-            this.calendarView.setOnPreviousPageChangeListener(() -> initializeDisplayContent());
-            this.calendarView.setOnForwardPageChangeListener(() -> initializeDisplayContent());
+            this.calendarView.setOnPreviousPageChangeListener(() -> updateNumbers());
+            this.calendarView.setOnForwardPageChangeListener(() -> updateNumbers());
+            this.calendarView.setOnCalendarDayClickListener(new OnCalendarDayClickListener() {
+                @Override
+                public void onClick(@NonNull CalendarDay calendarDay) {
+
+                }
+            });
             this.calendarView.setOnDayClickListener((EventDay eventDay) -> {
                 DayType type = DayType.REGULAR_DAY;
                 if (eventDay != null && CustomEventDay.class.isAssignableFrom(eventDay.getClass())) {
@@ -157,12 +189,9 @@ public class MainActivity extends AppCompatActivity
                 Log.i(TAG, String.valueOf(eventDay.getCalendar().get(Calendar.DAY_OF_MONTH)));
                 Intent intent = new Intent(getApplicationContext(), DayTypeActivity.class);
                 Bundle options = new Bundle();
-
                 intent.putExtra("dayType", type.getCode());
                 intent.putExtra("date", eventDay.getCalendar().getTimeInMillis());
-
                 startActivityForResult(intent, REQUEST_CODE_DAY_TYPE_ACTIVITY, options);
-
             });
             Calendar c = null;
             c = Calendar.getInstance();
@@ -172,6 +201,45 @@ public class MainActivity extends AppCompatActivity
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private void updateNumbers() {
+        Calendar c = this.calendarView.getCurrentPageDate();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH) + 1;
+        List<Day> days =  DataManager.getInstance(this.getApplicationContext()).get(year, month);
+        Set<Day> holidays = getHolidays(days);
+        Set<Day> office = getOfficeDays(days);
+        Set<Day> wfa = getWFADays(days);
+        Set<Day> nonWeekendHolidays = getMonWeekendHolidays(holidays.stream().collect(Collectors.toList()));
+        Set<Day> nonWeekendWFA = getNonWeekendWFA(wfa.stream().collect(Collectors.toList()));
+        int requiredDays = getWorkingDays(year, month);
+        requiredDays = requiredDays - nonWeekendHolidays.size();
+
+        showWifiName(lastDetectedSSID == null ? "Unknown" : lastDetectedSSID, Color.GRAY);
+
+        TextView textView = null;
+
+        textView = (TextView) findViewById(R.id.text_view_requiredDays);
+        textView.setText("Required days: " + requiredDays);
+
+        textView = (TextView) findViewById(R.id.text_view_holidays);
+        textView.setText("Holidays: " + nonWeekendHolidays.size());
+
+        textView = (TextView) findViewById(R.id.text_view_attendedDays);
+        textView.setText("Office: " + (office.size() + wfa.size()));
+
+        textView = (TextView) findViewById(R.id.text_view_daysToComplete);
+        int remaining = requiredDays - (office.size() + nonWeekendWFA.size());
+        textView.setText("Remaining: " + remaining);
+
+        LocalDate now = LocalDate.now();
+        textView = (TextView) findViewById(R.id.text_view_today);
+        Optional<Day> found = office.stream().filter(d -> {
+            return d.getDate().getYear() == now.getYear() && d.getDate().getMonthValue() == now.getMonthValue() && d.getDate().getDayOfMonth() == now.getDayOfMonth();
+        }).findAny();
+        textView.setText("Today: " + (found.isPresent() ? "DETECTED" : "NOT DETECTED YET"));
+
     }
 
     private void showWifiName(String ssid, int color) {
@@ -193,69 +261,39 @@ public class MainActivity extends AppCompatActivity
     }
 
     @SuppressLint("ResourceType")
-    private void initializeDisplayContent() {
+    private void initializeDisplayContent(List<Day> days) {
         setLoading();
         try {
             Calendar c = this.calendarView.getCurrentPageDate();
             int year = c.get(Calendar.YEAR);
             int month = c.get(Calendar.MONTH) + 1;
-            this.calendarView.setEnabled(false);
+            //this.calendarView.setEnabled(false);
+            updateNumbers();
 
-
-            Set<Day> days = DataManager.getInstance(this).get(year, month);
-
-            Set<Day> holidays = days.stream().filter(d -> d.getDayType() == HOLIDAY_DAY).collect(Collectors.toSet());
-            Set<Day> office = days.stream().filter(d -> d.getDayType() == OFFICE_DAY).collect(Collectors.toSet());
-            Set<Day> wfa = days.stream().filter(d -> d.getDayType() == WFA_DAY).collect(Collectors.toSet());
-            Set<Day> nonWeekendHolidays = holidays.stream().filter(d -> d.getDate().getDayOfWeek() != DayOfWeek.SUNDAY && d.getDate().getDayOfWeek() != DayOfWeek.SATURDAY).collect(Collectors.toSet());
-            Set<Day> nonWeekendWFA = wfa.stream().filter(d -> d.getDate().getDayOfWeek() != DayOfWeek.SUNDAY && d.getDate().getDayOfWeek() != DayOfWeek.SATURDAY).collect(Collectors.toSet());
-            int requiredDays = getWorkingDays(year, month);
-
-            showWifiName(lastDetectedSSID == null ? "Unknown" : lastDetectedSSID, Color.GRAY);
-
-            TextView textView = null;
-
-            textView = (TextView) findViewById(R.id.text_view_requiredDays);
-            textView.setText("Required days: " + requiredDays);
-
-            textView = (TextView) findViewById(R.id.text_view_holidays);
-            textView.setText("Holidays: " + nonWeekendHolidays.size());
-
-            textView = (TextView) findViewById(R.id.text_view_attendedDays);
-            textView.setText("Office: " + (office.size() + wfa.size()));
-
-            textView = (TextView) findViewById(R.id.text_view_daysToComplete);
-            textView.setText("Remaining: " + (requiredDays - (nonWeekendHolidays.size() + office.size() + nonWeekendWFA.size())));
-
-            LocalDate now = LocalDate.now();
-            textView = (TextView) findViewById(R.id.text_view_today);
-            Optional<Day> found = office.stream().filter(d -> {
-                return d.getDate().getYear() == now.getYear() && d.getDate().getMonthValue() == now.getMonthValue() && d.getDate().getDayOfMonth() == now.getDayOfMonth();
-            }).findAny();
-            textView.setText("Today: " + (found.isPresent() ? "DETECTED" : "NOT DETECTED YET"));
-
+            Set<Day> holidays = getHolidays(days);
+            Set<Day> office = getOfficeDays(days);
+            Set<Day> wfa = getWFADays(days);
 
             List<EventDay> events = new ArrayList<>();
-            Calendar cal = Calendar.getInstance();
             for (Day d : holidays) {
                 LocalDate date = d.getDate();
-                cal.set(date.getYear(), date.getMonthValue() - 1, date.getDayOfMonth());
+                Calendar cal = localDateToCalendar(date);
                 events.add(new CustomEventDay(cal, HOLIDAY_DAY, R.drawable.nonworking));
             }
             for (Day d : office) {
                 LocalDate date = d.getDate();
-                cal.set(date.getYear(), date.getMonthValue() - 1, date.getDayOfMonth());
+                Calendar cal = localDateToCalendar(date);
                 events.add(new CustomEventDay(cal, OFFICE_DAY, R.drawable.office));
             }
             for (Day d : wfa) {
                 LocalDate date = d.getDate();
-                cal.set(date.getYear(), date.getMonthValue() - 1, date.getDayOfMonth());
+                Calendar cal = localDateToCalendar(date);
                 events.add(new CustomEventDay(cal, WFA_DAY, R.drawable.wfa));
             }
 
             CalendarView calendarView = findViewById(R.id.calendar);
             calendarView.setEvents(events);
-            calendarView.setEnabled(true);
+            //calendarView.setEnabled(true);
 
 
             /*CompletableFuture.supplyAsync(() -> {
@@ -285,6 +323,44 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    private Set<Day> getNonWeekendWFA(List<Day> wfa) {
+        return wfa.stream().filter(d -> d.getDate().getDayOfWeek() != DayOfWeek.SUNDAY && d.getDate().getDayOfWeek() != DayOfWeek.SATURDAY).collect(Collectors.toSet());
+    }
+
+    private Set<Day> getMonWeekendHolidays(List<Day> days) {
+        return days.stream().filter(d -> d.getDate().getDayOfWeek() != DayOfWeek.SUNDAY && d.getDate().getDayOfWeek() != DayOfWeek.SATURDAY).collect(Collectors.toSet());
+    }
+
+    private Set<Day> getWFADays(List<Day> days) {
+        return days.stream().filter(d -> d.getDayType() == WFA_DAY).collect(Collectors.toSet());
+    }
+
+    private Set<Day> getOfficeDays(List<Day> days) {
+        return days.stream().filter(d -> d.getDayType() == OFFICE_DAY).collect(Collectors.toSet());
+    }
+
+    private Set<Day> getHolidays(List<Day> days) {
+        return days.stream().filter(d -> d.getDayType() == HOLIDAY_DAY).collect(Collectors.toSet());
+    }
+
+    private Calendar localDateToCalendar(LocalDate date) {
+        //Calendar calendar = new GregorianCalendar(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
+        Calendar calendar = Calendar.getInstance();
+
+        //cal.clear();
+        calendar.set(Calendar.YEAR, date.getYear());
+        calendar.set(Calendar.MONTH, date.getMonthValue() - 1);
+        calendar.set(Calendar.DAY_OF_MONTH, date.getDayOfMonth());
+        //cal.set(date.getYear(), date.getMonthValue() , date.getDayOfMonth());
+        /*System.out.println("Current Calendar's Year: " + calendar.get(Calendar.YEAR));
+        System.out.println("Current Calendar's Day: " + calendar.get(Calendar.MONTH));
+        System.out.println("Current Calendar's Day: " + calendar.get(Calendar.DATE));
+        System.out.println("Current Calendar's Day: " + calendar.get(Calendar.DAY_OF_MONTH));
+        System.out.println("Current MINUTE: " + calendar.get(Calendar.MINUTE));
+        System.out.println("Current SECOND: " + calendar.get(Calendar.SECOND));*/
+        return calendar;
+    }
+
     private int getWorkingDays(int year, int month) {
         int workingDays = 0;
         LocalDate indexDate = LocalDate.of(year, month, 1);
@@ -298,22 +374,13 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-
-
     @Override
     protected void onResume() {
-        //if (this.broadcastReceiver == null) instantiateBroadcastReceiver();
-        if (!isReceiverRegistered) {
-            IntentFilter intentFilter = new IntentFilter(String.valueOf(Action.WIFI_DETECTED));
-            registerReceiver(this.broadcastReceiver, intentFilter);
-            isReceiverRegistered = true;
-        }
-
         super.onResume();
-        initializeIfIsNot();
-        initializeDisplayContent();
+        //initializeIfIsNot();
+        //initializeDisplayContent();
         //update settings values on side nav panel
-        updateSettingsValuesOnSideNav();
+        //updateSettingsValuesOnSideNav();
     }
 
     private void updateSettingsValuesOnSideNav() {

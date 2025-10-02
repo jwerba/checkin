@@ -18,12 +18,14 @@ import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
 @RequiresApi(api = Build.VERSION_CODES.O)
-public class FileStorage {
+public class FileStorage implements Storage {
 
     private Context context;
 
@@ -58,9 +60,9 @@ public class FileStorage {
     }
 
 
-    public Set<Day> getMonthData(int year, int month) throws IOException, ParseException {
+    public List<Day> getMonthData(int year, int month) throws Exception {
         File file = getFile(getFilePattern(year,  month));
-        HashSet<Day> days = new HashSet<>();
+        List<Day> days = new ArrayList<>();
         if (!file.exists()){
             return days;
         }
@@ -99,10 +101,10 @@ public class FileStorage {
         add(new Day(LocalDate.of(2023,8,24), DayType.OFFICE_DAY, ""));*/
     }
 
-    public void add(Day day) throws IOException, ParseException {
+    public void add(Day day) throws Exception {
         int year = day.getDate().getYear();
         int month = day.getDate().getMonthValue();
-        Set<Day> alreadyRegistered = this.getMonthData(year, month);
+        List<Day> alreadyRegistered = this.getMonthData(year, month);
         Optional<Day> any = alreadyRegistered.stream().filter(d -> d.getDate().equals(day.getDate())).findAny();
         if (any.isPresent()){
             Day dd = any.get();
@@ -130,6 +132,10 @@ public class FileStorage {
         }
     }
 
+    @Override
+    public List<Day> getAll() {
+        return null;
+    }
 
 
 }

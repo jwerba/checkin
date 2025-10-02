@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-
 android {
     defaultConfig {
         compileSdkVersion 33
@@ -22,10 +21,11 @@ android {
 }
 
 dependencies {
-    implementation 'com.applandeo:material-calendar-view:1.7.0'
+    implementation 'com.applandeo:material-calendar-view:1.9.2'
     implementation "androidx.work:work-runtime:2.8.0"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
     androidTestImplementation('androidx.test.espresso:espresso-core:3.1.0', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })

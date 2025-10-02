@@ -12,7 +12,7 @@
         android:title="@string/pref_title_display_name" />
     <EditTextPreference
         android:defaultValue="@string/pref_default_email"
-        android:inputType="textEmailAddress"
+        android:inputType="textCapWords"
         android:key="pref_user_ssid"
         android:password="false"
         android:selectAllOnFocus="true"
