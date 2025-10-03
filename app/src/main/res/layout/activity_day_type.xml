@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:layout_centerVertical="true"
+    tools:context=".activities.DayTypeActivity">
+
+    <LinearLayout
+        tools:ignore="MissingConstraints"
+        android:background="#d8dff2"
+        android:layout_height="200dip"
+        android:orientation="horizontal"
+        android:layout_width="wrap_content">
+
+        <ImageButton
+            android:id="@+id/imageButtonOffice"
+            android:layout_width="180sp"
+            android:layout_height="70sp"
+            android:layout_margin="2dp"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:background="@android:color/transparent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/office"
+            android:adjustViewBounds="true"
+            />
+
+        <ImageButton
+            android:id="@+id/imageButtonWFA"
+            android:layout_width="180sp"
+            android:layout_height="70sp"
+            android:layout_weight="1"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:src="@drawable/wfa"
+            android:layout_margin="2dp"
+            android:layout_gravity="center"
+            android:background="@android:color/transparent"
+            />
+
+        <ImageButton
+            android:id="@+id/imageButtonNone"
+            android:layout_width="180sp"
+            android:layout_height="70sp"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/regular"
+            android:background="@android:color/transparent"
+            android:layout_gravity="center"
+            />
+        <ImageButton
+            android:id="@+id/imageButtonHoliday"
+            android:layout_width="180sp"
+            android:layout_height="70sp"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/nonworking"
+            android:layout_gravity="center"
+            android:background="@android:color/transparent"
+            />
+
+        <ImageButton
+            android:id="@+id/imageButtonOfficeVerified"
+            android:layout_width="180sp"
+            android:layout_height="70sp"
+            android:layout_gravity="center"
+            android:layout_margin="5dp"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/office_verified" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

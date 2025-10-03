@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
+
+    <com.applandeo.materialcalendarview.CalendarView
+        android:id="@+id/calendar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+
+    <TextView
+        android:id="@+id/text_view_currentWifi"
+        android:layout_width="match_parent"
+        android:layout_height="27dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/text_view_requiredDays"
+        android:layout_width="match_parent"
+        android:layout_height="29dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/text_view_attendedDays"
+        android:layout_width="match_parent"
+        android:layout_height="29dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/text_view_holidays"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/text_view_daysToComplete"
+        android:layout_width="match_parent"
+        android:layout_height="29dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+
+    <TextView
+        android:id="@+id/text_view_today"
+        android:layout_width="match_parent"
+        android:layout_height="29dp"
+        android:gravity="center"
+        android:minHeight="96dp"
+        android:text="XXXXXXXXX"
+        android:textColor="@color/colorPrimary" />
+</LinearLayout>
