@@ -34,6 +34,11 @@ public class GeoFencingDetectionStrategy extends BroadcastReceiver implements De
 
     public static final String TAG = "GeoFencingDetectionStrategy";
 
+    // Constructor sin argumentos requerido por Android para BroadcastReceiver
+    public GeoFencingDetectionStrategy() {
+        // Constructor vacío para el sistema Android
+    }
+
     public GeoFencingDetectionStrategy(Context context) {
         this.context = context;
         geofencingClient = LocationServices.getGeofencingClient(context);

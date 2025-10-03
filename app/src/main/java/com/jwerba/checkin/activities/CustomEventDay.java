@@ -8,31 +8,22 @@ import com.jwerba.checkin.model.DayType;
 
 import java.util.Calendar;
 
-public class CustomEventDay { // extends EventDay {
+public class CustomEventDay {
     private DayType type;
-    CalendarDay c;
+    private EventDay eventDay;
+    
     public CustomEventDay(Calendar day, DayType type) {
-        //super(day);
+        this.eventDay = new EventDay(day);
         this.setType(type);
     }
 
     public CustomEventDay(Calendar day, DayType type, int drawable) {
-        //super(day, drawable);
+        this.eventDay = new EventDay(day, drawable);
         this.setType(type);
     }
 
     public CustomEventDay(Calendar day, DayType type, Drawable drawable) {
-        //super(day, drawable);
-        this.setType(type);
-    }
-
-    public CustomEventDay(Calendar day, DayType type, int drawable, int labelColor) {
-        //super(day, drawable, labelColor);
-        this.setType(type);
-    }
-
-    public CustomEventDay(Calendar day, DayType type, Drawable drawable, int labelColor) {
-        //super(day, drawable, labelColor);
+        this.eventDay = new EventDay(day, drawable);
         this.setType(type);
     }
 
@@ -42,5 +33,13 @@ public class CustomEventDay { // extends EventDay {
 
     public void setType(DayType type) {
         this.type = type;
+    }
+    
+    public EventDay getEventDay() {
+        return eventDay;
+    }
+    
+    public Calendar getCalendar() {
+        return eventDay.getCalendar();
     }
 }

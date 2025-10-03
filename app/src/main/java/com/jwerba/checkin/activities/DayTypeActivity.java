@@ -70,6 +70,16 @@ public class DayTypeActivity extends Activity {
             }
         });
 
+        ImageButton imageButtonOfficeVerified = (ImageButton)findViewById(R.id.imageButtonOfficeVerified);
+        imageButtonOfficeVerified.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                returnIntent.putExtra("dayType", DayType.VERIFIED_OFFICE_DAY.getCode());
+                setResult(Activity.RESULT_OK, returnIntent);
+                finish();
+            }
+        });
+
         switch (dayType){
             case HOLIDAY_DAY:
                 imageButtonHoliday.setPressed(true);
@@ -82,6 +92,9 @@ public class DayTypeActivity extends Activity {
                 break;
             case WFA_DAY:
                 imageButtonWFA.setPressed(true);
+                break;
+            case VERIFIED_OFFICE_DAY:
+                imageButtonOfficeVerified.setPressed(true);
                 break;
         }
     }

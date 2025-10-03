@@ -2,6 +2,7 @@ package com.jwerba.checkin.activities;
 
 import static com.jwerba.checkin.model.DayType.HOLIDAY_DAY;
 import static com.jwerba.checkin.model.DayType.OFFICE_DAY;
+import static com.jwerba.checkin.model.DayType.VERIFIED_OFFICE_DAY;
 import static com.jwerba.checkin.model.DayType.WFA_DAY;
 
 import android.Manifest;
@@ -61,6 +62,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +82,7 @@ public class MainActivity extends AppCompatActivity
     private BroadcastReceiver broadcastReceiver;
     private boolean isReceiverRegistered = false;
     private String lastDetectedSSID = null;
+    private Map<String, DayType> dayTypeMap = new HashMap<>();
 
     private final DetectionRunner runner = new DetectionRunner(this);
     @Override
@@ -182,9 +185,13 @@ public class MainActivity extends AppCompatActivity
             });
             this.calendarView.setOnDayClickListener((EventDay eventDay) -> {
                 DayType type = DayType.REGULAR_DAY;
-                if (eventDay != null && CustomEventDay.class.isAssignableFrom(eventDay.getClass())) {
-                    CustomEventDay ced = (CustomEventDay) eventDay;
-                    type = ced.getType();
+                if (eventDay != null) {
+                    Calendar cal = eventDay.getCalendar();
+                    String dateKey = String.format("%d-%d-%d", 
+                        cal.get(Calendar.YEAR), 
+                        cal.get(Calendar.MONTH), 
+                        cal.get(Calendar.DAY_OF_MONTH));
+                    type = dayTypeMap.getOrDefault(dateKey, DayType.REGULAR_DAY);
                 }
                 Log.i(TAG, String.valueOf(eventDay.getCalendar().get(Calendar.DAY_OF_MONTH)));
                 Intent intent = new Intent(getApplicationContext(), DayTypeActivity.class);
@@ -210,6 +217,7 @@ public class MainActivity extends AppCompatActivity
         List<Day> days =  DataManager.getInstance(this.getApplicationContext()).get(year, month);
         Set<Day> holidays = getHolidays(days);
         Set<Day> office = getOfficeDays(days);
+        Set<Day> verifiedOffice = getDays(days, VERIFIED_OFFICE_DAY);
         Set<Day> wfa = getWFADays(days);
         Set<Day> nonWeekendHolidays = getMonWeekendHolidays(holidays.stream().collect(Collectors.toList()));
         Set<Day> nonWeekendWFA = getNonWeekendWFA(wfa.stream().collect(Collectors.toList()));
@@ -227,10 +235,10 @@ public class MainActivity extends AppCompatActivity
         textView.setText("Holidays: " + nonWeekendHolidays.size());
 
         textView = (TextView) findViewById(R.id.text_view_attendedDays);
-        textView.setText("Office: " + (office.size() + wfa.size()));
+        textView.setText("Office: " + (office.size() + wfa.size() + verifiedOffice.size()));
 
         textView = (TextView) findViewById(R.id.text_view_daysToComplete);
-        int remaining = requiredDays - (office.size() + nonWeekendWFA.size());
+        int remaining = requiredDays - (office.size()  + verifiedOffice.size() + nonWeekendWFA.size());
         textView.setText("Remaining: " + remaining);
 
         LocalDate now = LocalDate.now();
@@ -238,7 +246,11 @@ public class MainActivity extends AppCompatActivity
         Optional<Day> found = office.stream().filter(d -> {
             return d.getDate().getYear() == now.getYear() && d.getDate().getMonthValue() == now.getMonthValue() && d.getDate().getDayOfMonth() == now.getDayOfMonth();
         }).findAny();
-        textView.setText("Today: " + (found.isPresent() ? "DETECTED" : "NOT DETECTED YET"));
+        Optional<Day> verifiedFound = office.stream().filter(d -> {
+            return d.getDate().getYear() == now.getYear() && d.getDate().getMonthValue() == now.getMonthValue() && d.getDate().getDayOfMonth() == now.getDayOfMonth();
+        }).findAny();
+
+        textView.setText("Today: " + ((found.isPresent() || verifiedFound.isPresent())  ? "DETECTED" : "NOT DETECTED YET"));
 
     }
 
@@ -273,22 +285,51 @@ public class MainActivity extends AppCompatActivity
             Set<Day> holidays = getHolidays(days);
             Set<Day> office = getOfficeDays(days);
             Set<Day> wfa = getWFADays(days);
+            Set<Day> verified = getDays(days, VERIFIED_OFFICE_DAY);
 
+            // Limpiar el mapa anterior y crear uno nuevo
+            dayTypeMap.clear();
+            
             List<EventDay> events = new ArrayList<>();
             for (Day d : holidays) {
                 LocalDate date = d.getDate();
                 Calendar cal = localDateToCalendar(date);
-                events.add(new CustomEventDay(cal, HOLIDAY_DAY, R.drawable.nonworking));
+                String dateKey = String.format("%d-%d-%d", 
+                    cal.get(Calendar.YEAR), 
+                    cal.get(Calendar.MONTH), 
+                    cal.get(Calendar.DAY_OF_MONTH));
+                dayTypeMap.put(dateKey, HOLIDAY_DAY);
+                events.add(new EventDay(cal, R.drawable.nonworking));
             }
             for (Day d : office) {
                 LocalDate date = d.getDate();
                 Calendar cal = localDateToCalendar(date);
-                events.add(new CustomEventDay(cal, OFFICE_DAY, R.drawable.office));
+                String dateKey = String.format("%d-%d-%d", 
+                    cal.get(Calendar.YEAR), 
+                    cal.get(Calendar.MONTH), 
+                    cal.get(Calendar.DAY_OF_MONTH));
+                dayTypeMap.put(dateKey, OFFICE_DAY);
+                events.add(new EventDay(cal, R.drawable.office));
+            }
+            for (Day d : verified) {
+                LocalDate date = d.getDate();
+                Calendar cal = localDateToCalendar(date);
+                String dateKey = String.format("%d-%d-%d",
+                        cal.get(Calendar.YEAR),
+                        cal.get(Calendar.MONTH),
+                        cal.get(Calendar.DAY_OF_MONTH));
+                dayTypeMap.put(dateKey, VERIFIED_OFFICE_DAY);
+                events.add(new EventDay(cal, R.drawable.office_verified));
             }
             for (Day d : wfa) {
                 LocalDate date = d.getDate();
                 Calendar cal = localDateToCalendar(date);
-                events.add(new CustomEventDay(cal, WFA_DAY, R.drawable.wfa));
+                String dateKey = String.format("%d-%d-%d", 
+                    cal.get(Calendar.YEAR), 
+                    cal.get(Calendar.MONTH), 
+                    cal.get(Calendar.DAY_OF_MONTH));
+                dayTypeMap.put(dateKey, WFA_DAY);
+                events.add(new EventDay(cal, R.drawable.wfa));
             }
 
             CalendarView calendarView = findViewById(R.id.calendar);
@@ -337,6 +378,10 @@ public class MainActivity extends AppCompatActivity
 
     private Set<Day> getOfficeDays(List<Day> days) {
         return days.stream().filter(d -> d.getDayType() == OFFICE_DAY).collect(Collectors.toSet());
+    }
+
+    private Set<Day> getDays(List<Day> days, DayType type) {
+        return days.stream().filter(d -> d.getDayType() == type).collect(Collectors.toSet());
     }
 
     private Set<Day> getHolidays(List<Day> days) {

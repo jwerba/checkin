@@ -6,7 +6,8 @@ public enum DayType {
     OFFICE_DAY("OFFICE_DAY", 0),
     WFA_DAY("WFA_DAY", 1),
     REGULAR_DAY("REGULAR_DAY", -1),
-    HOLIDAY_DAY("HOLIDAY_DAY", 2);
+    HOLIDAY_DAY("HOLIDAY_DAY", 2),
+    VERIFIED_OFFICE_DAY("VERIFIED_OFFICE_DAY", 3);
 
     private String code;
     private Integer id;
@@ -34,6 +35,9 @@ public enum DayType {
                 break;
             case 2:
                 d = HOLIDAY_DAY;
+                break;
+            case 3:
+                d = VERIFIED_OFFICE_DAY;
                 break;
         }
         return d;

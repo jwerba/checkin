@@ -34,7 +34,6 @@ public class DetectionWorker extends Worker {
 
     @Override
     public Result doWork() {
-        Data outputData = new Data.Builder().putString("DetectionResult", "").build();
         String x = getInputData().getString("param1");
         List<DetectionResult> results = manager.runDetections();
         boolean detected = false;
@@ -42,6 +41,7 @@ public class DetectionWorker extends Worker {
             detected = result.isDetected();
             if (detected) break;
         }
+        Data outputData = new Data.Builder().putString("detected", detected? "true": "false").build();
         return Result.success(outputData);
     }
 
